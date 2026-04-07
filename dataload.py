@@ -10,81 +10,66 @@ DB_DSN  = "127.0.0.1:1521/XE"
 
 # Initialize Oracle Client
 oracledb.init_oracle_client(lib_dir=LIB_DIR)
+# Defining CSV file paths and preparing SQL statements
+severity_path = r"data\severity_information.csv"
+severity_str = "INSERT INTO SEVERITY (Time_Start, Time_End, Sev_Rating) VALUES (to_date(:1,'YYYY-MM-DD HH24:MI:SS '), to_date(:2,'YYYY-MM-DD HH24:MI:SS'), :3)"
 
-try:
-    # Connect to database
-    conn = oracledb.connect(user=DB_USER, password=DB_PASS, dsn=DB_DSN)
-    cursor = conn.cursor()
-    print("Connected to Database.")
+time_path = r"data\time_information.csv"
+time_str = "INSERT INTO TIM (Time_ID, Time_Start, Time_End) VALUES (:1,to_date(:2,'YYYY-MM-DD HH24:MI:SS'), to_date(:3,'YYYY-MM-DD HH24:MI:SS'))"
 
-    #Loading CSV Files
-    severity_df = pd.read_csv(r"data\severity_information.csv")
-    time_df = pd.read_csv(r"data\time_information.csv")
-    coordinate_df = pd.read_csv(r"data\coordinate_information.csv")
-    location_df = pd.read_csv(r"data\location_information.csv")
-    accident_df = pd.read_csv(r"data\accident_information.csv")
-    weather_df = pd.read_csv(r"data\weather_information.csv")
-    print("CSV files loaded.")
+coordinate_path = r"data\coordinate_information.csv"
+coordinate_str = "INSERT INTO COORDINATE (Loc_Start_Lat, Loc_Start_Lng, Loc_Street, Loc_City, Loc_County, Loc_State, Loc_Country, Loc_Timezone, Loc_Airport_Code) VALUES (:1,:2,:3,:4,:5,:6,:7,:8,:9)"
 
-    
-    # 1. Severity Table
-    for _, row in severity_df.iterrows():
-        cursor.execute(
-            "INSERT INTO SEVERITY (Time_Start, Time_End, Acc_Severity) VALUES (TO_DATE(:1,'yyyy/mm/dd hh:mi:ss am'),TO_DATE(:2,'yyyy/mm/dd hh:mi:ss am'), To_NUMBER(:3))",
-            [row["Start_Time"], row["End_Time"], int(row["Severity"])]
-        )
+location_path = r"data\location_information.csv"
+location_str = "INSERT INTO LOC (Loc_ID, Loc_Start_Lat, Loc_Start_Lng, Loc_End_Lat, Loc_End_Lng) VALUES (:1,:2,:3,:4,:5)"
 
-    print("Severity Table Loaded")
+accident_path = r"data\accident_information.csv"
+accident_str = "INSERT INTO ACCIDENT (Acc_ID, Time_ID, Loc_ID, Acc_Source, Acc_Description, Acc_Distance) VALUES (:1,:2,:3,:4,:5,:6)"
 
-    # 2. Time Table
-    for _, row in time_df.iterrows():
-        cursor.execute(
-            "INSERT INTO TIM (Time_ID, Time_Start, Time_End) VALUES (:1,TO_DATE(:2,'yyyy/mm/dd hh:mi:ss am'),TO_DATE(:3,'yyyy/mm/dd hh:mi:ss am'))",
-            [row["Time_ID"],row["Start_Time"], row["End_Time"]]
-        )
+weather_path = r"data\weather_information.csv"
+weather_str = "INSERT INTO WEATHER (Time_ID, Loc_ID, Wea_Timestamp, Wea_Temperature, Wea_Condition, Wea_Wind_Chill, Wea_Humidity, Wea_Visibility, Wea_Wind_Direction, Wea_Wind_Speed, Wea_Pressure, Wea_Precipitation) VALUES (:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI:SS'),:4,:5,:6,:7,:8,:9,:10,:11,:12)"
+print("CSV files loaded.")
 
-    print("Time Table Loaded")
+# Load function 
+def bulk_load(file_path, sql_str):
+    try:
+        # 1. Connect to database
+        conn = oracledb.connect(user=DB_USER, password=DB_PASS, dsn=DB_DSN)
+        cursor = conn.cursor()
+        print("Connected to Database.")
 
-    # 3. Coordinate Table
-    for _, row in coordinate_df.iterrows():
-        cursor.execute(
-            "INSERT INTO COORDINATE (Loc_Start_Lat, Loc_Start_Lng, Loc_Street, Loc_City, Loc_County, Loc_State, Loc_Country, Loc_Timezone, Loc_Airport_Code) VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9)",
-            [float(row["Start_Lat"]), float(row["Start_Lng"]), row["Street"], row["City"], row["County"], row["State"], row["Zipcode"], row["Country"], row["Airport_Code"]]
-        )
+        # 2. Reading file
+        with open(file_path, mode='r', encoding="utf-8") as f:
+            reader = csv.reader(f)
+            next(reader)
+            data_to_insert = [row for row in reader]
+        
+        print("Table Read")
 
-    print("Coordinate Table Loaded")
+        # 3. Prepare Bulk Insert SQL
+        sql = sql_str
 
-    # 4. Location Table
-    for _, row in location_df.iterrows():
-        cursor.execute(
-            "INSERT INTO LOC (Loc_ID, Loc_Start_Lat, Loc_Start_Lng, Loc_End_Lat, Loc_End_Lng) VALUES (:1, :2, :3, :4, :5)",
-            [row["Location_ID"],float(row["Start_Lat"]), float(row["Start_Lng"]), float(row["End_Lat"]), float(row["End_Lng"])]
-        )
+        # 4. Execute Batch
+        print(f"Start bulk load of {len(data_to_insert)} raw...")
+        cursor.executemany(sql, data_to_insert)
 
-    print("Location Table Loaded")
-    # 5. Accident Table
-    for _, row in accident_df.iterrows():
-        cursor.execute(
-            "INSERT INTO ACCIDENT (Acc_ID, Time_ID, Loc_ID, Acc_Source, Acc_Description, Acc_Distance) VALUES (:1, :2, :3, :4, :5, :6)",
-            [row["ID"], row["Location_ID"], row["Time_ID"], row["Source"],float(row["Distance(mi)"]),row["Description"]]
-        )
+        # 5. Commit Changes
+        conn.commit()
+        print(f"Successfully Loaded {cursor.rowcount} rows into database")
+        
+    except Exception as e:
+            print(f"Error during bulk load: {e}")
+            if 'conn' in locals():
+                conn.rollback() # Undo changes if an error occurs
 
-    print("Accident Table Loaded")
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
 
-    # 6. Weather Table
-    for _, row in weather_df.iterrows():
-        cursor.execute(
-            "INSERT INTO WEATHER (Time_ID, Loc_ID, Wea_Timestamp, Wea_Temperature, Wea_Condition, Wea_Wind_Chill, Wea_Humidity, Wea_Visibility, Wea_Wind_Direction, Wea_Wind_Speed, Wea_Precipitation, Wea_Sunrise_Sunset, Wea_Civil_Twilight, Wea_Nautical_Twilight, Wea_Astronomical_Twilight) VALUES (:1, :2, TO_TIMESTAMP(:3,'mm/dd/yyyy hh:mi:ss am'), :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15, :16, :17)",
-            [row["Location_ID"], row["Time_ID"], row["Weather_Timestamp"], float(row["Temperature(F)"]), row["Weather_Condition"], float(row["Wind_Chill(F)"]), int(row["Humidity(%)"]), int(row["Visibility(mi)"]), row["Wind_Direction"], float(row["Wind_Speed(mph))"]),float(row["Precipitation(in)"]), row["Sunrise_Sunset"], row["Civil_Twilight"], row["Nautical_Twilight"], row["Astronomical_Twilight"]]
-        )
-
-    print("Weather Table Loaded")
-
-except Exception as e:
-        print(f"Error during bulk load: {e}")
-        if 'conn' in locals():
-            conn.rollback() # Undo changes if an error occurs
-
-finally:
-    if 'cursor' in locals(): cursor.close()
-    if 'conn' in locals(): conn.close()
+# Loading the csv files into the database
+bulk_load(severity_path, severity_str)
+bulk_load(time_path, time_str)
+bulk_load(coordinate_path, coordinate_str)
+bulk_load(location_path, location_str)
+bulk_load(accident_path, accident_str)
+bulk_load(weather_path, weather_str)
