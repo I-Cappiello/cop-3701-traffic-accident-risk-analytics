@@ -1,3 +1,16 @@
+CREATE TABLE TIM(
+    Time_ID VARCHAR2(10) PRIMARY KEY,
+    Time_Start DATE NOT NULL,
+    Time_End DATE NOT NULL
+);
+
+CREATE TABLE SEVERITY(
+    Time_Start DATE NOT NULL,
+    Time_End DATE NOT NULL,
+    Sev_Rating NUMBER NOT NULL,
+    CONSTRAINT PK_Severity PRIMARY KEY(Time_Start, Time_End)
+);
+
 CREATE TABLE LOC(
     Loc_ID VARCHAR2(10) PRIMARY KEY,
     Loc_Start_Lat NUMBER NOT NULL,
@@ -19,47 +32,28 @@ CREATE TABLE COORDINATE(
     CONSTRAINT PK_Coordinate PRIMARY KEY(Loc_Start_Lat, Loc_Start_Lng)
 );
 
-CREATE TABLE TIM(
-    Time_ID VARCHAR2(10) PRIMARY KEY,
-    Time_Start TIMESTAMP NOT NULL,
-    Time_End TIMESTAMP NOT NULL
-);
-
-CREATE TABLE SEVERITY(
-    Time_Start TIMESTAMP NOT NULL,
-    Time_End TIMESTAMP NOT NULL,
-    Acc_Severity NUMBER NOT NULL,
-    CONSTRAINT PK_Severity PRIMARY KEY(Time_Start, Time_End)
-);
-
 CREATE TABLE ACCIDENT(
     Acc_ID VARCHAR2(10) PRIMARY KEY,
     Time_ID VARCHAR2(10) NOT NULL,
     Loc_ID VARCHAR2(10) NOT NULL,
     Acc_Source	VARCHAR2(20) NOT NULL,
     Acc_Description  VARCHAR2(500),
-    Acc_Distance FLOAT NOT NULL,
-    CONSTRAINT UK_Accident_Time_Location UNIQUE(Time_ID, Loc_ID)
+    Acc_Distance FLOAT NOT NULL
 );
 
 CREATE TABLE WEATHER(
     Time_ID VARCHAR2(10) NOT NULL,
     Loc_ID VARCHAR2(10) NOT NULL,
-    Wea_Timestamp TIMESTAMP,
+    Wea_Timestamp DATE,
     Wea_Temperature FLOAT,
-    Wea_Condition VARCHAR2(20),
+    Wea_Condition VARCHAR2(50),
     Wea_Wind_Chill FLOAT,
     Wea_Humidity NUMBER,
     Wea_Visibility FLOAT,
     Wea_Wind_Direction VARCHAR2(10),
     Wea_Wind_Speed FLOAT,
     Wea_Pressure FLOAT,
-    Wea_Speed FLOAT,
     Wea_Precipitation FLOAT,
-    Wea_Sunrise_Sunset VARCHAR2(10),
-    Wea_Civil_Twilight VARCHAR2(10),
-    Wea_Nautical_Twilight VARCHAR2(10),
-    Wea_Astronomical_Twilight VARCHAR2(10),
     Constraint PK_Weather PRIMARY KEY(Time_Id,Loc_ID)
 );
 
@@ -68,6 +62,11 @@ ALTER TABLE ACCIDENT
 ADD CONSTRAINT FK_ACCIDENT_LOCATION
 FOREIGN KEY (Loc_ID)
 REFERENCES LOC(Loc_ID);
+
+ALTER TABLE ACCIDENT
+ADD CONSTRAINT FK_ACCIDENT_TIME
+FOREIGN KEY (Time_ID)
+REFERENCES TIM(Time_ID);
 
 ALTER TABLE WEATHER
 ADD CONSTRAINT FK_WEATHER_TIME
