@@ -6,7 +6,7 @@ I intend to use OrcaleSQL and DatGrip to create the database detailed above. As 
 The dataset used for this project is linked below.
 [Database Link](https://www.kaggle.com/datasets/sobhanmoosavi/us-accidents/data)
 
-### ER Diagram
+## ER Diagram
 The user groups for this model are the traffic overseers and street planners who access the data, and the administrator(s) who manage/alter the data as needed. 
 
 Below is the final ER diagram, and the structure that the database actually uses. It is in 3NF.
