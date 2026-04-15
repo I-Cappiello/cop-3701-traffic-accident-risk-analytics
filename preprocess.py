@@ -3,7 +3,7 @@ import csv
 from datetime import datetime, timedelta
 
 # input file
-input_file = r"Small_US_Accidents_March23.csv"
+input_file = r"Tiny_US_Accidents_March23.csv"
 
 # read csv
 df = pd.read_csv(input_file)
