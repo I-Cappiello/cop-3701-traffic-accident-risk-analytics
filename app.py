@@ -10,13 +10,13 @@ import oracledb
 
 # --- DATABASE SETUP ---
 # Update this path to your local Instant Client folder
-LIB_DIR = r"C:\Users\boltm\Documents\instantclient_11_2"
+LIB_DIR = r"C:\oraclexe\app\oracle\instantclient_11_2\instantclient_23_0"
 
 
 # Your Oracle Credentials
-DB_USER = "system" # or your FreeSQL username
-DB_PASS = "password" # your password for the dbms user
-DB_DSN  = "localhost:1521/xe" # or your FreeSQL DSN
+DB_USER = "SYSTEM" # or your FreeSQL username
+DB_PASS = "QuiteME3M" # your password for the dbms user
+DB_DSN  = "127.0.0.1:1521/XE" # or your FreeSQL DSN
 
 # Initialize Oracle Client for Thick Mode
 @st.cache_resource
@@ -38,19 +38,24 @@ def get_connection():
 # --- STREAMLIT UI ---
 st.title("Traffic Accident Risk Analytics Database")
 
-menu = ["Spatial Coordinate Query", "Spatial State Query", "Severity Ranking Query", "City Finder Query", "Time Period Query"]
+menu = ["Spatial Coordinate Query", "Spatial State Query", "Severity Finder Query", "City Finder Query", "Time Period Query"]
 choice = st.sidebar.selectbox("Select Action", menu)
 
 if choice == "Spatial Coordinate Query":
     st.write("### Find accidents that occured between two pairs of lat/long coordinates")
-    loc_start_lng = st.text_input("Enter longitude1:")
-    loc_start_lat = st.text_input("Enter latitude1:")
-    loc_end_lng = st.text_input("Enter longitude2:")
-    loc_end_lat = st.text_input("Enter latitude2:")
+    loc_start_lng = st.text_input("Enter longitude1 (number only):",value="0",placeholder="0")
+    loc_start_lat = st.text_input("Enter latitude1 (number only):",value="0",placeholder="0")
+    loc_end_lng = st.text_input("Enter longitude2 (number only):",value="0",placeholder="0")
+    loc_end_lat = st.text_input("Enter latitude2 (number only):",value="0",placeholder="0")
     try:
+        min_lat = min(float(loc_start_lat),float(loc_end_lat))
+        min_lng = min(float(loc_start_lng),float(loc_end_lng))
+        max_lat = max(float(loc_start_lat),float(loc_end_lat))
+        max_lng = max(float(loc_start_lng),float(loc_end_lng))
+
         conn = get_connection()
         cur = conn.cursor()
-        cur.execute(f"Select a.ACC_ID, a.ACC_DESCRIPTION, a.LOC_ID, l.LOC_START_LAT, l.LOC_START_LNG FROM ACCIDENT a JOIN LOC l ON a.LOC_ID = l.LOC_ID WHERE l.LOC_START_LAT BETWEEN {loc_start_lat} AND {loc_end_lat} AND l.LOC_START_LNG BETWEEN {loc_start_lat} AND {loc_end_lat}")
+        cur.execute(f"Select a.ACC_ID, a.ACC_DESCRIPTION, a.LOC_ID, l.LOC_START_LAT, l.LOC_START_LNG FROM ACCIDENT a JOIN LOC l ON a.LOC_ID = l.LOC_ID WHERE l.LOC_START_LAT BETWEEN {min_lat} AND {max_lat} AND l.LOC_START_LNG BETWEEN {min_lng} AND {max_lng}")
         data = cur.fetchall()
         df = pd.DataFrame(data ,columns=["ACC_ID", "ACC_DESCRIPTION", "LOC_ID", "LOC_START_LAT","LOC_START_LNG"])
         cur.close()
@@ -66,7 +71,7 @@ if choice == "Spatial Coordinate Query":
 # --- Retrieve Region Data ---
 if choice == "Spatial State Query":
     st.write("### Retrieve State Data")
-    state_name = st.text_input("Enter a State Name (Case Sensitive)")
+    state_name = st.text_input("Enter a State Abbreviation (Ex.Ohio = OH, Case Sensitive)")
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -84,9 +89,9 @@ if choice == "Spatial State Query":
         st.error(f"Error: {e}")
 
 # --- Retrieve Country Data ---
-if choice == "Severity Ranking Query":
-    st.write("Find accidents by severity")
-    severity = st.text_input("Enter a Severity")
+if choice == "Severity Finder Query":
+    st.write("### Find accidents by severity")
+    severity = st.text_input("Enter a Severity (1,2,3,4,5)",value="0",placeholder="0")
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -126,7 +131,7 @@ if choice == "City Finder Query":
 
 # --- Retrieve Data From Provider ---
 if choice == "Time Period Query":
-    st.write("### Retrieve Data From Provider")
+    st.write("### Find accidents that occurred between two dates")
     time_start = st.text_input("Enter a Start Date (YYYY-MM-DD HH24:MI:SS)")
     time_end = st.text_input("Enter a End Date (YYYY-MM-DD HH24:MI:SS)")
     try:
