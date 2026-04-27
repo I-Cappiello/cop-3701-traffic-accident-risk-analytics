@@ -27,3 +27,4 @@ Using the Features:
 - **Severity Finder:** The user inputs a severity rating (1,2,3,4,5), and all accident records with that rating are selected. To note: severity is determined by the amount of time traffic was delayed (time_start and time_end).
 - **City Finder Query:** A user inputs the name of a city, and all accident records with that city listed as the location of the accident are selected.
 - **Time Period Query:** A user inputs two dates, and all the accident records with a start time and end time between those two dates are selected.
+![App Screenshot](https://github.com/I-Cappiello/cop-3701-traffic-accident-risk-analytics/blob/main/App_Screenshot.png)
